@@ -1,0 +1,152 @@
+-- 🚀 Flight GUI with Animation, Slider, Camera Follow
+-- 📌 Made by Khalil
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local HRP = character:WaitForChild("HumanoidRootPart")
+
+-- Flight setup
+local flying = false
+local speed = 50
+local velocity = Instance.new("BodyVelocity")
+local gyro = Instance.new("BodyGyro")
+
+velocity.MaxForce = Vector3.new(100000, 100000, 100000)
+gyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+gyro.P = 10000
+velocity.P = 5000
+
+-- GUI setup
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "FlightUI"
+gui.ResetOnSpawn = false
+
+-- Background Frame
+local bg = Instance.new("Frame", gui)
+bg.Size = UDim2.new(0, 200, 0, 180)
+bg.Position = UDim2.new(0, 20, 0, 20)
+bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+bg.BackgroundTransparency = 0.2
+
+-- Smooth corners
+local uiCorner = Instance.new("UICorner", bg)
+uiCorner.CornerRadius = UDim.new(0, 12)
+
+-- Animate background color
+task.spawn(function()
+	while true do
+		local tween = TweenService:Create(bg, TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+			BackgroundColor3 = Color3.fromRGB(math.random(40, 80), math.random(40, 80), math.random(40, 80))
+		})
+		tween:Play()
+		tween.Completed:Wait()
+	end
+end)
+
+-- Fly Button
+local flyBtn = Instance.new("TextButton", bg)
+flyBtn.Size = UDim2.new(1, -20, 0, 40)
+flyBtn.Position = UDim2.new(0, 10, 0, 10)
+flyBtn.Text = "Fly (Made by Khalil)"
+flyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+flyBtn.TextColor3 = Color3.new(1,1,1)
+flyBtn.Font = Enum.Font.GothamBold
+flyBtn.TextSize = 16
+flyBtn.AutoButtonColor = true
+
+local flyCorner = Instance.new("UICorner", flyBtn)
+flyCorner.CornerRadius = UDim.new(0, 8)
+
+-- Speed Slider
+local sliderLabel = Instance.new("TextLabel", bg)
+sliderLabel.Size = UDim2.new(1, -20, 0, 20)
+sliderLabel.Position = UDim2.new(0, 10, 0, 60)
+sliderLabel.Text = "Speed: " .. tostring(speed)
+sliderLabel.TextColor3 = Color3.new(1, 1, 1)
+sliderLabel.Font = Enum.Font.Gotham
+sliderLabel.TextSize = 14
+sliderLabel.BackgroundTransparency = 1
+
+local slider = Instance.new("TextButton", bg)
+slider.Size = UDim2.new(1, -20, 0, 30)
+slider.Position = UDim2.new(0, 10, 0, 90)
+slider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+slider.Text = ""
+local sliderCorner = Instance.new("UICorner", slider)
+sliderCorner.CornerRadius = UDim.new(0, 6)
+
+local sliderKnob = Instance.new("Frame", slider)
+sliderKnob.Size = UDim2.new(0, 20, 1, 0)
+sliderKnob.Position = UDim2.new((speed - 10)/90, 0, 0, 0)
+sliderKnob.BackgroundColor3 = Color3.fromRGB(0, 255, 128)
+local knobCorner = Instance.new("UICorner", sliderKnob)
+knobCorner.CornerRadius = UDim.new(0, 6)
+
+-- Handle slider dragging
+local dragging = false
+slider.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+	end
+end)
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+RS.RenderStepped:Connect(function()
+	if dragging then
+		local mouseX = UIS:GetMouseLocation().X
+		local sliderX = slider.AbsolutePosition.X
+		local width = slider.AbsoluteSize.X
+		local pct = math.clamp((mouseX - sliderX) / width, 0, 1)
+
+		sliderKnob.Position = UDim2.new(pct, 0, 0, 0)
+		speed = math.floor(10 + (pct * 90))
+		sliderLabel.Text = "Speed: " .. tostring(speed)
+	end
+end)
+
+-- Toggle flying
+flyBtn.MouseButton1Click:Connect(function()
+	flying = not flying
+
+	if flying then
+		velocity.Parent = HRP
+		gyro.Parent = HRP
+		flyBtn.Text = "Unfly (Made by Khalil)"
+	else
+		velocity.Parent = nil
+		gyro.Parent = nil
+		flyBtn.Text = "Fly (Made by Khalil)"
+	end
+end)
+
+-- Flight logic
+RS.RenderStepped:Connect(function()
+	if flying then
+		local cam = workspace.CurrentCamera
+		local moveDir = Vector3.zero
+
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir += cam.CFrame.UpVector end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir -= cam.CFrame.UpVector end
+
+		if moveDir.Magnitude > 0 then
+			velocity.Velocity = moveDir.Unit * speed
+		else
+			velocity.Velocity = Vector3.zero
+		end
+
+		gyro.CFrame = cam.CFrame
+	end
+end)
