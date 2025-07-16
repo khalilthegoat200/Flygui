@@ -1,3 +1,6 @@
+-- 🚀 Mobile Flight GUI (Neon + D-Pad + Tool Fetch) by Khalil
+
+-- Services local Players = game:GetService("Players") local UIS = game:GetService("UserInputService") local RS = game:GetService("RunService") local TweenService = game:GetService("TweenService") local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- 🚀 Flight GUI with Animation, Slider, Camera Follow
 -- 📌 Made by Khalil
 
@@ -150,3 +153,40 @@ RS.RenderStepped:Connect(function()
 		gyro.CFrame = cam.CFrame
 	end
 end)
+-- Player and Character Setup local player = Players.LocalPlayer local character = player.Character or player.CharacterAdded:Wait() local HRP = character:WaitForChild("HumanoidRootPart")
+
+-- Flight Variables local flying = false local speed = 50 local velocity = Instance.new("BodyVelocity") local gyro = Instance.new("BodyGyro") velocity.MaxForce = Vector3.new(1e5, 1e5, 1e5) gyro.MaxTorque = Vector3.new(4e5, 4e5, 4e5) gyro.P = 10000 velocity.P = 5000
+
+-- GUI local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui")) gui.Name = "FlightUI" gui.ResetOnSpawn = false
+
+-- Neon Background Frame local bg = Instance.new("Frame", gui) bg.Size = UDim2.new(0, 220, 0, 220) bg.Position = UDim2.new(0, 20, 0, 20) bg.BackgroundColor3 = Color3.fromRGB(30, 30, 30) bg.BackgroundTransparency = 0.2 local uiCorner = Instance.new("UICorner", bg) uiCorner.CornerRadius = UDim.new(0, 12)
+
+-- Neon Animation coroutine.wrap(function() while true do TweenService:Create(bg, TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundColor3 = Color3.fromRGB(math.random(100, 255), 0, math.random(100, 255)) }):Play() wait(4) end end)()
+
+-- Fly Button local flyBtn = Instance.new("TextButton", bg) flyBtn.Size = UDim2.new(1, -20, 0, 40) flyBtn.Position = UDim2.new(0, 10, 0, 10) flyBtn.Text = "Fly (Khalil)" flyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255) flyBtn.TextColor3 = Color3.new(1,1,1) flyBtn.Font = Enum.Font.GothamBold flyBtn.TextSize = 16 Instance.new("UICorner", flyBtn).CornerRadius = UDim.new(0, 8)
+
+-- Fetch Tools Button local fetchBtn = Instance.new("TextButton", bg) fetchBtn.Size = UDim2.new(1, -20, 0, 40) fetchBtn.Position = UDim2.new(0, 10, 0, 60) fetchBtn.Text = "Get Tools" fetchBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 150) fetchBtn.TextColor3 = Color3.new(1,1,1) fetchBtn.Font = Enum.Font.GothamBold fetchBtn.TextSize = 16 Instance.new("UICorner", fetchBtn).CornerRadius = UDim.new(0, 8)
+
+-- D-Pad Buttons local dpadFrame = Instance.new("Frame", gui) dpadFrame.Size = UDim2.new(0, 150, 0, 150) dpadFrame.Position = UDim2.new(1, -170, 1, -170) dpadFrame.BackgroundTransparency = 1
+
+local directions = { {Key = "Up", Offset = UDim2.new(0.33, 0, 0, 0), Vector = Vector3.new(0, 0, -1)}, {Key = "Down", Offset = UDim2.new(0.33, 0, 0.66, 0), Vector = Vector3.new(0, 0, 1)}, {Key = "Left", Offset = UDim2.new(0, 0, 0.33, 0), Vector = Vector3.new(-1, 0, 0)}, {Key = "Right", Offset = UDim2.new(0.66, 0, 0.33, 0), Vector = Vector3.new(1, 0, 0)}, {Key = "Up (Y)", Offset = UDim2.new(0.33, 0, -0.5, 0), Vector = Vector3.new(0, 1, 0)}, {Key = "Down (Y)", Offset = UDim2.new(0.33, 0, 1.2, 0), Vector = Vector3.new(0, -1, 0)} }
+
+local moveVector = Vector3.zero
+
+for _, info in ipairs(directions) do local btn = Instance.new("TextButton", dpadFrame) btn.Size = UDim2.new(0.33, -5, 0.33, -5) btn.Position = info.Offset btn.Text = "" btn.BackgroundColor3 = Color3.fromRGB(0, 255, 200) Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+btn.MouseButton1Down:Connect(function()
+	moveVector += info.Vector
+end)
+btn.MouseButton1Up:Connect(function()
+	moveVector -= info.Vector
+end)
+
+end
+
+-- Toggle Flight flyBtn.MouseButton1Click:Connect(function() flying = not flying if flying then velocity.Parent = HRP gyro.Parent = HRP flyBtn.Text = "Unfly (Khalil)" else velocity.Parent = nil gyro.Parent = nil flyBtn.Text = "Fly (Khalil)" end end)
+
+-- Fetch Tools fetchBtn.MouseButton1Click:Connect(function() for _, obj in pairs(ReplicatedStorage:GetDescendants()) do if obj:IsA("Tool") then obj:Clone().Parent = player.Backpack end end end)
+
+-- Flight Control RS.RenderStepped:Connect(function() if flying then local cam = workspace.CurrentCamera local dir = cam.CFrame:VectorToWorldSpace(moveVector) if dir.Magnitude > 0 then velocity.Velocity = dir.Unit * speed else velocity.Velocity = Vector3.zero end gyro.CFrame = cam.CFrame end end)
+
